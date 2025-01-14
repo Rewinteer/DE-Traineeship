@@ -113,4 +113,3 @@ class DatabaseQueries(Database):
         upd_query = f"SELECT query_to_xml('{query}', true, false, '');"
         result = self.execute_query(upd_query)
         return result[0][0]
-

@@ -79,6 +79,3 @@ if __name__ == '__main__':
                 save_data(db.get_json(db.select_rooms_with_lowest_avg_age), f'rooms_with_lowest_avg_age.{OUTPUT_DEFAULT_FORMAT}')
                 save_data(db.get_json(db.select_rooms_with_highest_age_diff), f'rooms_with_highest_age_diff.{OUTPUT_DEFAULT_FORMAT}')
                 save_data(db.get_json(db.select_rooms_with_different_genders), f'rooms_with_different_genders.{OUTPUT_DEFAULT_FORMAT}')
-
-
-
