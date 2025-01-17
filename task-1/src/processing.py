@@ -3,6 +3,7 @@ import json
 import os.path
 
 from db import Database
+from logger import logger
 from pathlib import Path
 
 
@@ -81,17 +82,20 @@ def parse_cli_args() -> argparse.Namespace:
                             type=str,
                             help='Query to execute. Could be omitted')
     args = arg_parser.parse_args()
+    logger.info(f'Passed CLI args - {args}')
     return args
 
 
 def load_json(file_path: str) -> str:
     if Path(file_path).exists():
         data = json.loads(Path(file_path).read_text())
+        logger.info(f'loaded json data from {file_path}')
         return json.dumps(data)
 
 
 def save_data(serialized_data: str, file_name: str) -> None:
     new_filepath = os.path.join(OUTPUT_PATH, file_name)
+    logger.info(f'saved {file_name} at {new_filepath}')
     with open(new_filepath, 'w') as f:
         f.write(serialized_data)
 

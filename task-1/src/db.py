@@ -1,6 +1,7 @@
+import config
 import json
-import os
 import psycopg2
+from logger import logger
 
 
 # queries for filling the tables
@@ -43,17 +44,19 @@ class Database:
 
     def __enter__(self):
         self.conn = psycopg2.connect(
-            dbname=os.getenv('DB_NAME'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            host=os.getenv('DB_HOST'),
-            port=os.getenv('DB_PORT')
+            dbname=config.dbname,
+            user=config.user,
+            password=config.password,
+            host=config.host,
+            port=config.port,
         )
+        logger.info(f'Connected to the database {config.dbname}')
         return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         if self.conn:
             self.conn.close()
+            logger.info(f'Database connection closed')
 
     def execute_query(self, query: str, data=None) -> str | None:
         with self.conn.cursor() as cur:
@@ -64,10 +67,17 @@ class Database:
                 else:
                     result = None
                 self.conn.commit()
+                logger.info(f'executed query {query}')
                 return result
             # already exists
             except (psycopg2.errors.UniqueViolation, psycopg2.errors.DuplicateTable):
+                logger.warning(f'query {query} failed - data already exists')
                 self.conn.rollback()
+            except Exception as e:
+                logger.error(f'query {query} failed - {e}')
+                self.conn.rollback()
+                raise
+
 
     def create_tables(self) -> None:
         self.execute_query(self.__create_rooms_table_query)
