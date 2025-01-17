@@ -8,7 +8,7 @@ class Logger:
             cls._instance = logging.getLogger('Task1Logger')
             cls._instance.setLevel(logging.INFO)
 
-            handler = logging.StreamHandler()
+            handler = logging.FileHandler('export/execution.log')
             handler.setLevel(logging.INFO)
 
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
