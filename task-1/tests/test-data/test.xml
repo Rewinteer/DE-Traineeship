@@ -1,0 +1,33 @@
+<table xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+<row>
+  <id>0</id>
+  <name>Room #0</name>
+  <students_count>9</students_count>
+</row>
+
+<row>
+  <id>1</id>
+  <name>Room #1</name>
+  <students_count>7</students_count>
+</row>
+
+<row>
+  <id>2</id>
+  <name>Room #2</name>
+  <students_count>9</students_count>
+</row>
+
+<row>
+  <id>3</id>
+  <name>Room #3</name>
+  <students_count>5</students_count>
+</row>
+
+<row>
+  <id>4</id>
+  <name>Room #4</name>
+  <students_count>11</students_count>
+</row>
+
+</table>

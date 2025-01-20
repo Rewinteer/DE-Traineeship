@@ -91,6 +91,7 @@ def load_json(file_path: str) -> str:
         data = json.loads(Path(file_path).read_text())
         logger.info(f'loaded json data from {file_path}')
         return json.dumps(data)
+    raise FileNotFoundError
 
 
 def save_data(serialized_data: str, file_name: str) -> None:
@@ -108,13 +109,9 @@ if __name__ == '__main__':
     db = Database()
 
     with db:
-        # Data initialization
-        db.create_tables()
-
-        # filling the tables
+        # data insertion
         db.insert_rooms(rooms_data)
         db.insert_students(students_data)
-        db.add_birthday_index()
 
         # data retrieval
 
