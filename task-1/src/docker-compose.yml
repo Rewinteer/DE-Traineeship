@@ -1,0 +1,32 @@
+services:
+  app:
+    image: rewinteer/task-1:latest
+    env_file:
+      - .env
+    volumes:
+      - ./export:/usr/src/app/export
+    depends_on:
+      - db
+    entrypoint: ["./wait-for-it.sh", "db:5432", "--", "python", "processing.py"]
+    networks:
+      - task_1_network
+
+  db:
+    image: postgres
+    container_name: db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - task_1_network
+
+volumes:
+  pg_data:
+
+networks:
+  task_1_network:
+    driver: bridge
