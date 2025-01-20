@@ -42,6 +42,7 @@ class Database:
             CREATE INDEX IF NOT EXISTS students_birthday ON public.students USING btree (birthday)
         """
 
+
     def __enter__(self):
         self.conn = psycopg2.connect(
             dbname=config.dbname,
@@ -51,6 +52,8 @@ class Database:
             port=config.port,
         )
         logger.info(f'Connected to the database {config.dbname}')
+        self.__create_tables()
+        self.__add_birthday_index()
         return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
@@ -78,12 +81,11 @@ class Database:
                 self.conn.rollback()
                 raise
 
-
-    def create_tables(self) -> None:
+    def __create_tables(self) -> None:
         self.execute_query(self.__create_rooms_table_query)
         self.execute_query(self.__create_students_table_query)
 
-    def add_birthday_index(self) -> None:
+    def __add_birthday_index(self) -> None:
         self.execute_query(self.__create_students_birthday_index_query)
 
     def insert_students(self, students_data: str) -> None:
