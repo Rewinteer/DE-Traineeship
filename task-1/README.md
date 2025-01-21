@@ -35,8 +35,11 @@ To build the containers, use the following command in the directory where the do
 | -query    |                     Query to execute.                     |       None          |
 
 Example:
-`docker-compose run app \
+```
+docker-compose run app \
     -students "/usr/src/app/sample-data/students.json" \
     -rooms "/usr/src/app/sample-data/rooms.json" \
     -query "SELECT * FROM students LIMIT 5" \
-    -format "xml"`
+    -format "xml"
+```
+The command above will execute "SELECT * FROM students LIMIT 5" query and save it as output.xml file in the export/ folder.
