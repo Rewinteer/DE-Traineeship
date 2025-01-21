@@ -1,6 +1,6 @@
 # Task-1
 
-This code is designed to run a script (`processing.py`) that connects to a PostgreSQL database, creates rooms and students tables fills it with given JSON data and queries the database either using pre-defined queries or user-defined queries passed as CLI arguments.
+This code is designed to run a script (`processing.py`) that connects to a PostgreSQL database, creates rooms and students tables, fills it with given JSON data and queries the database either using pre-defined queries or user-defined queries passed as CLI arguments.
 
 ## Prerequisites
 
