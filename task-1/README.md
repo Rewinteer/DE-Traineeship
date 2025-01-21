@@ -42,4 +42,4 @@ docker-compose run app \
     -query "SELECT * FROM students LIMIT 5" \
     -format "xml"
 ```
-The command above will execute "SELECT * FROM students LIMIT 5" query and save it as output.xml file in the export/ folder.
+The command above will import students and rooms data from the provided paths, then it will execute "SELECT * FROM students LIMIT 5" query and save it as output.xml file in the export/ folder.
