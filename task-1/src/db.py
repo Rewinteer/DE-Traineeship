@@ -41,7 +41,9 @@ class Database:
         self.__create_students_birthday_index_query = """
             CREATE INDEX IF NOT EXISTS students_birthday ON public.students USING btree (birthday)
         """
-
+        self.__drop_data_query = """
+            DROP SCHEMA public CASCADE; CREATE SCHEMA public
+        """
 
     def __enter__(self):
         self.conn = psycopg2.connect(
@@ -51,7 +53,7 @@ class Database:
             host=config.host,
             port=config.port,
         )
-        logger.info(f'Connected to the database {config.dbname}')
+        logger.info(f"Connected to the database {config.dbname}")
         self.__create_tables()
         self.__add_birthday_index()
         return self
@@ -59,7 +61,7 @@ class Database:
     def __exit__(self, exception_type, exception_value, exception_traceback):
         if self.conn:
             self.conn.close()
-            logger.info(f'Database connection closed')
+            logger.info(f"Database connection closed")
 
     def execute_query(self, query: str, data=None) -> str | None:
         with self.conn.cursor() as cur:
@@ -70,14 +72,14 @@ class Database:
                 else:
                     result = None
                 self.conn.commit()
-                logger.info(f'executed query {query}')
+                logger.info(f"executed query {query}")
                 return result
             # already exists
             except (psycopg2.errors.UniqueViolation, psycopg2.errors.DuplicateTable):
-                logger.warning(f'query {query} failed - data already exists')
+                logger.warning(f"query {query} failed - data already exists")
                 self.conn.rollback()
             except Exception as e:
-                logger.error(f'query {query} failed - {e}')
+                logger.error(f"query {query} failed - {e}")
                 self.conn.rollback()
                 raise
 
@@ -88,6 +90,9 @@ class Database:
     def __add_birthday_index(self) -> None:
         self.execute_query(self.__create_students_birthday_index_query)
 
+    def drop_data(self):
+        self.execute_query(self.__drop_data_query)
+
     def insert_students(self, students_data: str) -> None:
         self.execute_query(INSERT_STUDENTS_QUERY, (students_data,))
 
@@ -95,7 +100,7 @@ class Database:
         self.execute_query(INSERT_ROOMS_QUERY, (rooms_data,))
 
     def get_json(self, query: str) -> str:
-        upd_query = f'WITH t AS ({query}) SELECT json_agg(t) from t;'
+        upd_query = f"WITH t AS ({query}) SELECT json_agg(t) from t;"
         result = self.execute_query(upd_query)
         return json.dumps(result[0][0])
 
