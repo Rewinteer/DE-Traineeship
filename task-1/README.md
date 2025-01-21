@@ -19,7 +19,7 @@ DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 ```
 
-2. You need to copy/download the docker-compose.yml file from this repository.
+2. You need to copy/download the [docker-compose.yml](https://github.com/Rewinteer/DE-Traineeship/blob/main/task-1/src/docker-compose.yml) file from this repository.
 
 ### Running the Application
 1. Step 1: Build the Containers
