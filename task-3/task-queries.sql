@@ -9,6 +9,7 @@ JOIN category c ON c.category_id = fc.category_id
 GROUP BY c.name
 ORDER BY film_count DESC;
 
+
 --Вывести 10 актеров, чьи фильмы большего всего арендовали, отсортировать по убыванию.
 
 	-- 10 актеров из наиболее арендуемых фильмов:
@@ -40,6 +41,7 @@ JOIN category c ON fc.category_id = c.category_id
 GROUP BY c.name
 ORDER BY spent_money DESC
 LIMIT 1;
+
 
 --Вывести названия фильмов, которых нет в inventory. Написать запрос без использования оператора IN.
 
@@ -77,10 +79,49 @@ GROUP BY c."name", a.first_name, a.last_name
 HAVING COUNT(*) in (SELECT cnt FROM top_values)
 ORDER BY appeared_times DESC;
 
+
+
 --Вывести города с количеством активных и неактивных клиентов (активный — customer.active = 1). Отсортировать по количеству неактивных клиентов по убыванию.
 
-TODO
+SELECT
+	ct.city,
+	COUNT(CASE c.active  WHEN 1 THEN 1 ELSE NULL END) as active,
+  	COUNT(CASE c.active WHEN 0 THEN 1 ELSE NULL END) as unactive
+FROM
+	customer c
+LEFT JOIN address a ON c.address_id = a.address_id
+JOIN city ct ON a.city_id = ct.city_id
+GROUP BY ct.city
+ORDER BY unactive DESC, ct.city;
 
---Вывести категорию фильмов, у которой самое большое кол-во часов суммарной аренды в городах (customer.address_id в этом city), и которые начинаются на букву “a”. То же самое сделать для городов в которых есть символ “-”. Написать все в одном запросе.
 
-TODO
+
+--Вывести категорию фильмов, у которой самое большое кол-во часов суммарной аренды в городах (customer.address_id в этом city),
+--и которые начинаются на букву “a”. То же самое сделать для городов в которых есть символ “-”. Написать все в одном запросе.
+
+WITH category_ranks_per_city AS (
+	SELECT
+		ct.city AS city,
+		c.name AS category,
+		SUM (r.return_date - r.rental_date) AS total_rental_time,
+		ROW_NUMBER() OVER (PARTITION BY ct.city ORDER BY SUM (r.return_date - r.rental_date) DESC) AS rank
+	FROM
+		category c
+	JOIN film_category fc ON c.category_id = fc.category_id
+	JOIN inventory i ON i.film_id = fc.film_id
+	JOIN rental r ON i.inventory_id = r.inventory_id
+	JOIN customer cr ON r.customer_id = cr.customer_id
+	JOIN address a ON cr.address_id = a.address_id
+	JOIN city ct ON a.city_id = ct.city_id
+	WHERE ct.city LIKE 'A%' OR ct.city LIKE '%-%'
+	GROUP BY ct.city, c.name
+	ORDER BY ct.city, total_rental_time DESC
+)
+SELECT
+	city,
+	category
+FROM
+	category_ranks_per_city
+WHERE
+	category_ranks_per_city."rank" = 1
+ORDER BY city;
