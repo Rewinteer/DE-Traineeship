@@ -1,14 +1,7 @@
-import json
 import unittest
 import psycopg2
-from pathlib import Path
-from xml.etree.ElementTree import ParseError
-
 import config
-from config import password
 from db import Database
-from processing import load_json
-from xml.etree import ElementTree as ET
 from unittest.mock import patch, MagicMock
 
 
