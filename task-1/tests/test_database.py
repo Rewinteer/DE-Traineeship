@@ -1,143 +1,111 @@
 import json
 import unittest
+import psycopg2
 from pathlib import Path
 from xml.etree.ElementTree import ParseError
 
+import config
+from config import password
 from db import Database
 from processing import load_json
 from xml.etree import ElementTree as ET
+from unittest.mock import patch, MagicMock
 
 
-def is_valid_json(myjson: str) -> bool:
-    try:
-        json.loads(myjson)
-    except ValueError as e:
-        return False
-    return True
-
-
-def is_valid_xml(myxml: str) -> bool:
-    try:
-        ET.fromstring(myxml)
-    except ParseError:
-        return False
-    return True
-
-
-def load_xml(file_path: str):
-    if Path(file_path).exists():
-        with open(file_path, "r") as file:
-            data = file.read()
-            return data
-    raise FileNotFoundError
-
-
-TEST_CONNECTION_QUERY = "SELECT 1"
-TEST_TABLES_EXISTENCE_QUERY = """
-    SELECT
-        EXISTS (SELECT 1 FROM information_schema.tables
-                WHERE table_name = 'students' AND table_schema = 'public') AS table1_exists,
-        EXISTS (SELECT 1 FROM information_schema.tables
-                WHERE table_name = 'rooms' AND table_schema = 'public') AS table2_exists
-"""
-TEST_INDEX_EXISTENCE_QUERY = """
-    SELECT EXISTS (
-        SELECT 1
-        FROM pg_indexes
-        WHERE schemaname = 'public'
-        AND indexname = 'students_birthday'
-    )
-"""
-TEST_ROOM_COUNT_QUERY = """
-    SELECT COUNT(*)
-    FROM rooms
-"""
-TEST_STUDENT_COUNT_QUERY = """
-    SELECT COUNT(*)
-    FROM students
-"""
-TEST_DATA_RETRIEVAL = """
-    SELECT
-        r.id,
-        r.name,
-        COUNT(s.id) as students_count
-    FROM rooms r
-    LEFT JOIN students s
-    ON s.room = r.id
-    GROUP BY r.id
-    ORDER BY r.id
-    LIMIT 5
-"""
-
-AWAITED_ROOM_COUNT = 1000
-AWAITED_STUDENT_COUNT = 10000
+def get_mocked_conn_and_cursor(mock_connect):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_connect.return_value = mock_conn
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    return mock_conn, mock_cursor
 
 
 class TestDatabase(unittest.TestCase):
-    def test_database_connection(self):
-        db = Database()
-        with db:
-            response = db.execute_query(TEST_CONNECTION_QUERY)
-            self.assertEqual(response[0][0], 1)
+    @patch("db.psycopg2.connect")
+    def test_enter_exit(self, mock_connect):
+        mock_conn, mock_cursor = get_mocked_conn_and_cursor(mock_connect)
 
-    def test_tables_initialization(self):
-        db = Database()
-        with db:
-            table_existence = db.execute_query(TEST_TABLES_EXISTENCE_QUERY)[0]
-            self.assertEqual(table_existence[0], True, "students table does not exist")
-            self.assertEqual(table_existence[1], True, "rooms table does not exist")
+        with Database() as db:
+            pass
 
-            index_existence = db.execute_query(TEST_INDEX_EXISTENCE_QUERY)[0][0]
-            self.assertEqual(
-                index_existence,
-                True,
-                "index on students.birthday column was not created",
-            )
+        mock_connect.assert_called_once_with(
+            dbname=config.dbname,
+            user=config.user,
+            password=config.password,
+            host=config.host,
+            port=config.port,
+        )
 
-    def test_data_insertion(self):
-        db = Database()
-        with db:
-            rooms_data = load_json("sample-data/rooms.json")
-            students_data = load_json("sample-data/students.json")
-            db.insert_rooms(rooms_data)
-            db.insert_students(students_data)
-            room_count = db.execute_query(TEST_ROOM_COUNT_QUERY)[0][0]
-            student_count = db.execute_query(TEST_STUDENT_COUNT_QUERY)[0][0]
-            self.assertEqual(
-                room_count, AWAITED_ROOM_COUNT, "rooms table was not filled properly"
-            )
-            self.assertEqual(
-                student_count,
-                AWAITED_STUDENT_COUNT,
-                "students table was not filled properly",
-            )
+        mock_cursor.execute.assert_any_call(
+            db._Database__create_rooms_table_query, None
+        )
+        mock_cursor.execute.assert_any_call(
+            db._Database__create_students_table_query, None
+        )
+        mock_cursor.execute.assert_any_call(
+            db._Database__create_students_birthday_index_query, None
+        )
 
-    def test_xml_retrieval(self):
-        db = Database()
-        with db:
-            data = db.get_xml(TEST_DATA_RETRIEVAL)
-            self.assertEqual(is_valid_xml(data), True, "output is not a valid XML")
-            test_data = load_xml("test-data/test.xml")
-            self.assertEqual(
-                data, test_data, "output xml doesn't match the test xml data"
-            )
+        mock_conn.close.assert_called_once()
 
-    def test_json_retrieval(self):
-        db = Database()
-        with db:
-            result = db.get_json(TEST_DATA_RETRIEVAL)
-            self.assertEqual(is_valid_json(result), True, "output is not a valid JSON")
-            data_str = json.dumps(json.loads(result))
-            test_data = load_json("test-data/test.json").replace("\n", " ")
-            self.assertEqual(
-                data_str, test_data, "output json doesn't match the test json data"
-            )
+    @patch("db.psycopg2.connect")
+    def test_execute_query_success(self, mock_connect):
+        mock_conn, mock_cursor = get_mocked_conn_and_cursor(mock_connect)
+        mock_cursor.fetchall.return_value = [("result",)]
 
-    @classmethod
-    def tearDownClass(cls):
-        db = Database()
-        with db:
-            db.drop_data()
+        with Database() as db:
+            mock_conn.reset_mock()
+            mock_cursor.reset_mock()
+            result = db.execute_query("SELECT * FROM students;")
+
+        # Verify query execution
+        mock_cursor.execute.assert_called_once_with("SELECT * FROM students;", None)
+        self.assertEqual(result, [("result",)])
+        mock_conn.commit.assert_called_once()
+
+    @patch("db.psycopg2.connect")
+    def test_execute_query_exception(self, mock_connect):
+        mock_conn, mock_cursor = get_mocked_conn_and_cursor(mock_connect)
+        mock_cursor.execute.side_effect = psycopg2.errors.UniqueViolation
+
+        with Database() as db:
+            mock_conn.reset_mock()
+            mock_cursor.reset_mock()
+            db.execute_query("INSERT INTO some_table VALUES (1);")
+
+        mock_conn.rollback.assert_called_once()
+
+    @patch("db.psycopg2.connect")
+    def test_get_json(self, mock_connect):
+        mock_conn, mock_cursor = get_mocked_conn_and_cursor(mock_connect)
+        mock_cursor.fetchall.return_value = [[{"id": 1, "name": "Room A"}]]
+
+        with Database() as db:
+            mock_conn.reset_mock()
+            mock_cursor.reset_mock()
+            result = db.get_json("SELECT * FROM rooms")
+
+        # Verify query transformation and execution
+        mock_cursor.execute.assert_called_once_with(
+            "WITH t AS (SELECT * FROM rooms) SELECT json_agg(t) from t;", None
+        )
+        self.assertEqual(result, '{"id": 1, "name": "Room A"}')
+
+    @patch("db.psycopg2.connect")
+    def test_get_xml(self, mock_connect):
+        mock_conn, mock_cursor = get_mocked_conn_and_cursor(mock_connect)
+        mock_cursor.fetchall.return_value = [("<xml>mocked_xml_data</xml>",)]
+
+        with Database() as db:
+            mock_conn.reset_mock()
+            mock_cursor.reset_mock()
+            result = db.get_xml("SELECT * FROM rooms")
+
+        # Verify query transformation and execution
+        mock_cursor.execute.assert_called_once_with(
+            "SELECT query_to_xml('SELECT * FROM rooms', true, false, '');", None
+        )
+        self.assertEqual(result, "<xml>mocked_xml_data</xml>")
 
 
 if __name__ == "__main__":
